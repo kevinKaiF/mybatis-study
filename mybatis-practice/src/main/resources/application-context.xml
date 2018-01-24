@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                     http://www.springframework.org/schema/beans/spring-beans.xsd  
+                     http://www.springframework.org/schema/tx  
+                     http://www.springframework.org/schema/tx/spring-tx.xsd  
+                     http://www.springframework.org/schema/aop  
+                     http://www.springframework.org/schema/aop/spring-aop.xsd
+                     ">
+    <bean id="propertyConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:db.properties</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="dsDataSource" class="com.alibaba.druid.pool.DruidDataSource" destroy-method="close">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
+        <property name="useUnfairLock" value="true"/>
+        <property name="url" value="${db.url}"/>
+        <property name="username" value="${db.username}"/>
+        <property name="password" value="${db.password}"/>
+        <property name="notFullTimeoutRetryCount" value="2"/>
+        <property name="initialSize" value="0"/>
+        <property name="minIdle" value="0"/>
+        <property name="maxActive" value="32"/>
+        <property name="maxWait" value="5000"/>
+        <property name="validationQuery" value="SELECT 1"/>
+        <property name="exceptionSorterClassName" value="com.alibaba.druid.pool.vendor.MySqlExceptionSorter"/>
+        <property name="validConnectionCheckerClassName"
+                  value="com.alibaba.druid.pool.vendor.MySqlValidConnectionChecker"/>
+    </bean>
+
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--第一种方式，可以指定mapper.xml的位置-->
+        <!--第二种方式，可以在configLocation所配置的文件中配置mapper就可以-->
+        <!--<property name="mapperLocations" value="classpath:mapper/DataUserMapper.xml"/>-->
+        <property name="configLocation" value="classpath:mybatis-config.xml"></property>
+        <property name="dataSource" ref="dsDataSource"/>
+    </bean>
+
+    <!--整个代理的作用是方法增强-->
+
+    <!--MapperFactoryBean是工厂bean，通过getObject获取对象-->
+    <!--getSession().getMapper(clazz) SqlSessionTemplate的SqlSession代理对象sqlSessionProxy来完成getMapper-->
+    <!--底层是通过DefaultSqlSessionFactory来生成DefaultSqlSession来获取getMapper-->
+    <!--最终是通过Configuration来getMapper获取DAO对应的代理对象-->
+    <!--当执行DAO方法的时候，执行MapperProxy的代理方法，
+    ->由MapperMethod执行，
+    ->由Executor执行，默认是SimpleExecutor
+    ->由StatementHandler执行，默认是RoutingStatementHandler，默认委托PreparedStatementHandler
+    ->由ResultSetHandler执行，默认是DefaultResultSetHandler-->
+
+    <!--缓存机制-->
+    <!--缓存的key是语句id,sql,参数生成的hashCode为唯一标识-->
+    <!--一级缓存，BaseExecutor有个PerpetualCache localCache，会将查询结果放置在localCache-->
+    <!--一级缓存是存储在sqlSession中的，每次创建DefaultSqlSession，就要创建新的Executor，所以不同的sqlSession间的缓存是没法同享的-->
+    <!--依赖setting中的localCacheScope，默认是SESSION，否则是STATEMENT-->
+    <!--如果是STATEMENT,则每次执行完毕后会清除localCache，相当于没有缓存-->
+    <!--另外，必须是ResultHandler为null的，一级缓存才有效-->
+    <!--二级缓存，需要配置setting中的cacheEnabled为true才可以，此时的executor为CachingExecutor-->
+    <!--二级缓存是以mapper为命名空间，跨sqlSession-->
+    <!--方式一：xml配置-->
+    <!--在xml中需要在对应的mapper中配置cache标签来，设置对应的缓存策略，而cacheRef是用于共享同一个命名空间的cache-->
+    <!--方式二：注解配置-->
+    <!--在对应的DAO接口配置@Cache策略，@CacheRef是用于共享同一个命名空间的cache-->
+    <!--SELECT,DELETE,UPDATE,INSERT都可以配置useCache，表示每次在执行statement的时候，是否需要进行缓存（这已经很灵活了）-->
+    <!--SELECT,DELETE,UPDATE,INSERT都可以配置flushCache，表示每次在执行statement的时候，是否需要清除缓存-->
+    <!--另外，二级缓存可以定义自己的缓存，比如将数据存储到redis-->
+
+    <!--sqlSession与Spring-->
+    <!--一级缓存默认是由Mybatis进行管理，与Spring整合后DataSourceTransactionManager进行管理-->
+    <!--而Mybatis有自己的SpringManagedTransaction实现-->
+    <!--如果没有对spring的DataSourceTransactionManager配置AOP事务，则TransactionSynchronizationManager的ThreadLocal变量都是空的-->
+    <!--导致SpringManagedTransaction无法共享TransactionSynchronizationManager，也就没有事务管理，当CRUD结束就关闭SqlSession，即关闭Connection-->
+    <bean id="dataUserDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
+        <property name="mapperInterface" value="com.ai.dao.DataUserDao"/>
+        <property name="sqlSessionFactory" ref="sqlSessionFactory"/>
+    </bean>
+
+    <bean id="dataLogDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
+        <property name="mapperInterface" value="com.ai.dao.DataLogDao"/>
+        <property name="sqlSessionFactory" ref="sqlSessionFactory"/>
+    </bean>
+
+    <!-- transaction configuration-->
+    <bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dsDataSource"/>
+    </bean>
+
+    <!-- 定义事务通知 -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <!-- 定义方法的过滤规则 -->
+        <tx:attributes>
+            <!-- 所有方法都使用事务 -->
+            <tx:method name="save*" propagation="REQUIRED"/>
+            <tx:method name="update*" propagation="REQUIRED"/>
+            <tx:method name="add*" propagation="REQUIRED"/>
+            <tx:method name="insert*" propagation="REQUIRED"/>
+            <!-- 定义所有get开头的方法都是只读的 -->
+            <tx:method name="get*" read-only="true"/>
+            <tx:method name="find*" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <!-- 定义AOP配置 -->
+    <aop:config>
+        <!-- 定义一个切入点 -->
+        <aop:pointcut expression="execution (* com.ai.dao.*.*(..))" id="services"/>
+        <!-- 对切入点和事务的通知，进行适配 -->
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="services"/>
+    </aop:config>
+</beans>
