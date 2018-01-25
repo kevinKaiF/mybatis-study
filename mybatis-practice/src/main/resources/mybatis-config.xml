@@ -2,10 +2,25 @@
 <!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-config.dtd">
 <configuration>
+    <!--可以通过resource或url来指定properties文件，或者通过子标签-->
+    <!--<properties resource="" url="">-->
+        <!--<property name="" value=""/>-->
+    <!--</properties>-->
+
+    <!--default指定默认的环境-->
+    <!--<environments default="">-->
+        <!--<environment id="">-->
+            <!--<transactionManager type=""></transactionManager>-->
+            <!--<dataSource type=""></dataSource>-->
+        <!--</environment>-->
+    <!--</environments>-->
     <settings>
         <setting name="mapUnderscoreToCamelCase" value="true"/>
+        <!--启用二级缓存-->
         <setting name="cacheEnabled" value="true"/>
-        <setting name="lazyLoadingEnabled" value="false"/>
+        <!--启用延迟加载-->
+        <setting name="lazyLoadingEnabled" value="true"/>
+        <setting name="aggressiveLazyLoading" value="false"/>
         <setting name="multipleResultSetsEnabled" value="true"/>
         <setting name="useColumnLabel" value="true"/>
         <setting name="useGeneratedKeys" value="false"/>
@@ -41,8 +56,9 @@
         </plugin>
     </plugins>
 
-    <mappers>
-        <mapper resource="mapper/DataUserMapper.xml"></mapper>
-        <mapper class="com.ai.dao.DataLogDao"></mapper>
-    </mappers>
+    <!--<mappers>-->
+        <!--<mapper resource="mapper/DataUserMapper.xml"></mapper>-->
+        <!--<mapper resource="mapper/DataOutputMappingMapper.xml"></mapper>-->
+        <!--<mapper class="com.ai.dao.DataLogDao"></mapper>-->
+    <!--</mappers>-->
 </configuration>

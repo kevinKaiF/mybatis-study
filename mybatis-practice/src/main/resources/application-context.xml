@@ -39,7 +39,7 @@
     <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
         <!--第一种方式，可以指定mapper.xml的位置-->
         <!--第二种方式，可以在configLocation所配置的文件中配置mapper就可以-->
-        <!--<property name="mapperLocations" value="classpath:mapper/DataUserMapper.xml"/>-->
+        <property name="mapperLocations" value="classpath:mapper/*.xml"/>
         <property name="configLocation" value="classpath:mybatis-config.xml"></property>
         <property name="dataSource" ref="dsDataSource"/>
     </bean>
@@ -78,14 +78,28 @@
     <!--而Mybatis有自己的SpringManagedTransaction实现-->
     <!--如果没有对spring的DataSourceTransactionManager配置AOP事务，则TransactionSynchronizationManager的ThreadLocal变量都是空的-->
     <!--导致SpringManagedTransaction无法共享TransactionSynchronizationManager，也就没有事务管理，当CRUD结束就关闭SqlSession，即关闭Connection-->
-    <bean id="dataUserDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
-        <property name="mapperInterface" value="com.ai.dao.DataUserDao"/>
-        <property name="sqlSessionFactory" ref="sqlSessionFactory"/>
-    </bean>
 
-    <bean id="dataLogDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
-        <property name="mapperInterface" value="com.ai.dao.DataLogDao"/>
-        <property name="sqlSessionFactory" ref="sqlSessionFactory"/>
+    <!--注册DAO的方法-->
+    <!--方法一：单独注册DAO-->
+    <!--<bean id="dataUserDao" class="org.mybatis.spring.mapper.MapperFactoryBean">-->
+        <!--<property name="mapperInterface" value="com.ai.dao.DataUserDao"/>-->
+        <!--<property name="sqlSessionFactory" ref="sqlSessionFactory"/>-->
+    <!--</bean>-->
+
+    <!--<bean id="dataLogDao" class="org.mybatis.spring.mapper.MapperFactoryBean">-->
+        <!--<property name="mapperInterface" value="com.ai.dao.DataLogDao"/>-->
+        <!--<property name="sqlSessionFactory" ref="sqlSessionFactory"/>-->
+    <!--</bean>-->
+
+    <!--<bean id="dataOutputMappingDao" class="org.mybatis.spring.mapper.MapperFactoryBean">-->
+        <!--<property name="mapperInterface" value="com.ai.dao.DataOutputMappingDao"/>-->
+        <!--<property name="sqlSessionFactory" ref="sqlSessionFactory"/>-->
+    <!--</bean>-->
+
+    <!--方法二：扫描DAO包路径-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.ai.dao" />
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
     </bean>
 
     <!-- transaction configuration-->
